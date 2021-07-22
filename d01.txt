@@ -1,0 +1,519 @@
+*오라클 접속하기
+ 1.sql*plus로 접속하기
+  Run SQL Command Line실행
+ 
+ 2.실행창(cmd창)을 이용하여 접속하기
+  window키 + 실행(cmd입력)창
+	>sqlplus
+	> user-name : 접속계정명
+	> password  : 비번입력
+	
+	
+*sqlplus 명령어
+ : 오라클에서 사용자들에게 편리함을 제공하기위한 명령어
+ : 축약가능	예) connect -> conn
+   ;사용x  예) show user
+	           show user;  (;허용)
+ 
+- 시작 : sqlplus
+- 빠져나오기 : exit  
+- 편집 : ed[it]
+				버퍼에 저장된 마지막 쿼리문을 불러서 
+				편집하여 사용할 수 있도록 하는 명령어
+- 실행 : r[un]	=> 쿼리문+실행결과
+				/			=> 실행결과만 
+- 접속계정확인 : show user
+SQL> show user
+USER is "SYSTEM"
+
+- 접속 : conn[ect] 접속계정명
+-- sys접속하기
+SQL> connect /as sysdba
+Connected.
+SQL> show user
+USER is "SYS"	
+SQL> show user
+USER is ""
+SQL> -- 계정을 풀기위해 dba권한 계정으로 접속
+SQL> conn /as sysdba
+Connected.
+SQL> show user
+USER is "SYS"
+SQL>
+SQL> -- 계정풀기
+SQL> alter user hr
+  2  account unlock;
+
+User altered.
+
+SQL> conn hr/hr
+ERROR:
+ORA-01017: invalid username/password; logon denied
+
+
+Warning: You are no longer connected to ORACLE.	
+
+SQL> conn /as sysdba
+Connected.
+SQL> -- user의 비번변경
+SQL> alter user hr
+  2  identified by  hr;
+
+User altered.
+
+SQL> -- hr로 접속 후 확인
+SQL> conn hr/hr
+Connected.
+SQL> show user
+USER is "HR"
+SQL> -- 테이블 조회
+SQL> select *
+  2  from tab;
+	TNAME(테이블명)				TABTYPE(테이블타입)
+---------------------------------------	
+	COUNTRIES(국가)				TABLE
+	DEPARTMENTS(부서)			TABLE
+	EMPLOYEES(사원)				TABLE
+	JOBS(직책급여)					TABLE
+	JOB_HISTORY					TABLE
+	LOCATIONS(근무지)			TABLE
+	REGIONS(대륙)					TABLE
+	EMP_DETAILS_VIEW		VIEW
+	
+	-- 테이블구조 
+	문법> desc[ribe] 테이블명
+ Name(컬럼명)             Null    		Type(타입)
+ -------------------   -------- 	------------
+ COUNTRY_ID            NOT NULL 	CHAR(2)
+ COUNTRY_NAME                     VARCHAR2(40)
+ REGION_ID                        NUMBER	
+	
+ --내용조회
+ 문법
+ SELECT {* |  컬럼명 [as alias],컬럼명,...}
+ FROM		테이블명;
+
+SQL> select country_id, country_name,region_id
+  2  from   countries;
+	
+	
+SQL> -- regions 테이블의 내용조회
+SQL> select *
+  2  from   regions;
+
+ REGION_ID REGION_NAME
+---------- --------------------------
+         1 Europe
+         2 Americas
+         3 Asia
+         4 Middle East and Africa
+
+SQL> -- jobs 테이블 구조조회
+SQL> desc jobs
+ Name               Null?    Type
+ ------------- 		 --------  -------------
+ JOB_ID(직책ID)-PK      NOT NULL  VARCHAR2(10)
+ JOB_TITLE(직책명)    NOT NULL  VARCHAR2(35)
+ MIN_SALARY(최저급여)            NUMBER(6)
+ MAX_SALARY(최고급여)            NUMBER(6)
+
+SQL> -- 행수 조회
+참고	 count: 결과값이 한줄로 출력
+						=>결과가 단일행으로 출력 => 단일행함수(=그룹함수)
+SQL> select  count(*)
+  2  from jobs;
+  COUNT(*)
+----------
+        19
+
+-- employees 구조
+SQL> desc employees(사원)
+ Name
+ ---------------------
+ EMPLOYEE_ID(사원id)
+ FIRST_NAME(사원명)
+ LAST_NAME(성)
+ EMAIL(이메일)
+ PHONE_NUMBER(전화번호)		VARCHAR2
+ HIRE_DATE(입사일)					DATE
+ JOB_ID(직책ID)
+ SALARY(급여)
+ COMMISSION_PCT
+ MANAGER_ID
+ DEPARTMENT_ID
+
+SQL> --행수 조회
+SQL> select count(*)
+  2  from employees;
+  COUNT(*)
+----------
+       107
+
+> --사원의 전화번호,입사일 조회
+  1  select phone_number, hire_date
+  2* from employees
+PHONE_NUMBER                             HIRE_DAT
+=>문자데이터(VARCHAR2)                       =>날짜데이터(DATE)
+---------------------------------------- --------
+515.123.4567                             03/06/17
+515.123.4568                             05/09/21
+
+-- 날짜형식 변경
+방법1. 세션변경
+		> alter session 
+		  set   nls_date_format='RRRR/MM/DD';
+방법2. 함수를 적용하여 변경
+		> 함수챕터 참고하세요
+		> 사용함수 
+			TO_CHAR(표현식,'FORMAT')
+			날짜->문자형으로 변경 
+			
+>select hire_date,  TO_CHAR(hire_date,'RRRR/MM/DD')
+ from  employees
+
+HIRE_DAT TO_CHAR(HIRE_DATE,'R
+-------- --------------------
+03/06/17 2003/06/17
+05/09/21 2005/09/21
+
+>select hire_date,  TO_CHAR(hire_date,'RRRR-MM-DD HH24:MI:SS AM')
+from  employees;
+HIRE_DAT TO_CHAR(HIRE_DATE,'RRRR-MONTH-DDHH24:MI:SSAM')
+-------- -----------------------------------------------
+03/06/17 2003-6월 -17 00:00:00 오전
+05/09/21 2005-9월 -21 00:00:00 오전
+
+*컬럼의 alias(별칭)
+=> 컬럼명을 짧게, 이해도를 높이기위해.
+   "" : 소문자, 대소문자 혼합, 공백, 특수문자
+형식> select 컬럼명 as 별칭,
+					  컬럼명 별칭,
+						컬럼명 "별칭"
+		from    테이블명;
+
+예> select salary,
+          salary as  급여,
+          salary     "salary",
+          salary as  "SAL ary",
+          salary as  "$sal"
+   from   employees;
+    SALARY       급여     salary    SAL ary       $sal
+---------- ---------- ---------- ---------- ----------
+     24000      24000      24000      24000      24000  		
+		
+*null
+ : 알 수 없는 값
+ : not null -> null허용x => 필수입력
+	 
+참고 제약조건(constraint)
+   not null -> null허용x => 필수입력	
+	 unitque  -> 값이 유일  => 중복x
+	 Primary Key(PK) -> NN + UK + 테이블의 내용대표
+
+SQL> desc departments
+ DEPARTMENT_ID(부서ID)-PK     NUMBER(4)
+ DEPARTMENT_NAME(부서명)   	VARCHAR2(30)
+ MANAGER_ID        NUMBER(6)
+ LOCATION_ID       NUMBER(4)
+
+* || 
+ => 연결연산자
+    컬럼명과 문자,, 컬럼과 컬럼...
+
+* DISTINCT
+ => 중복된 값 한번만 출력
+ 형식> DISTINCT 컬럼명
+ 
+★★★★★--내용조회
+ 문법
+ SELECT {* |  컬럼명 [as alias],컬럼명,...}
+ FROM		테이블명
+ [WHERE 조건]
+ [GROUP BY 그룹기준]
+ [HAVING 그룹조건]
+ [ORDER BY  1차정렬기준 정렬방법,.., n차정렬기준 방법];
+ 
+ 정렬기준
+ - 컬럼명, 컬럼alias,  select절의 순서
+ 
+ 정렬방법
+ -오름차순(ASC) : 숫자 작->큰, A->Z, ㄱ->ㅎ, 예전->최근 (기본값)  
+ -내림차순(DESC): 숫자 큰->작, Z->A, ㅎ->ㄱ, 최근->예전
+ 
+ 참고
+  null인 데이터는 정렬시 
+	무한대로 취급하기 때문에
+	오름차순인 경우는 작->큰순으로 출력시 가장 마지막에 출력.
+ 
+>select DISTINCT department_id as depid
+from  employees
+order by depid asc;
+ 
+-- 부서내림차순 정렬
+-- 동일부서내에서는 최근 입사한 사원부터 
+-- 만약 입사동기라면 급여많이 받는 사원부터 출력
+SELECT 
+    first_name, salary,hire_date,department_id
+FROM   employees
+ORDER BY  department_id asc,  hire_date desc, salary desc; 
+ 
+ 
+ *WHERE(교재 P40~)
+ => 특정 조건을 제시하면서
+ 내가 원하는 데이터를 추출하여 조회할 수 있다
+ 
+ 참고
+	WHERE절은 수정(UPDATE), 삭제(DELETE)할 때도 사용된다
+	
+ *WHERE절에 사용되는 연산자(교재 p45~)	
+ *비교연산자
+ =	같다.일치.
+ != <> 같지X
+ A>=B		A는 B보다	크거나 같다		이상
+ A>B		A는 B보다 크다				초과
+ A<=B		A는 B보다	작거나 같다		이하
+ A<B		A는 B보다	작다				미만
+ 
+ *범위
+ between A and B : A이상 B이하 
+									 ~>=A  AND ~<=B
+ not between A and B 
+ 
+ in(A,B,C,...) : 하나라도 목록에 있는 값과 일치한다
+								 ~=A OR ~=B OR ~=C
+ not in(A,B,C,...)
+ 
+ *논리연산자
+ AND : 나열되는 조건을 모두 만족해야 참(true)
+ OR  : 나열되는 조건중에 단 하나라도 만족하면 참(true)
+       나열되는 조건 모두를 만족하지않아야먄 거짓(false)
+ NOT : 부정
+        ture이면 -> false
+        false이면 ->true				
+
+ 참고>	java, javascript등에서는 true,false를 boolean
+			 
+ 
+ '' : 문자, 날짜
+		: 대소문자 구분
+	
+ *애매한 범위
+  like	
+	%	:0개이상의 자릿수의 임의글자
+	_ :1개 자릿수의 임의글자
+
+	부서테이블의 부서번호는 53, 부서명은  마케_팅
+	        부서번호는 54, 부서명은   회%계부  입력 
+	INSERT INTO DEPT(deptno,dname) VALUES(53,'마케_팅');
+	INSERT INTO DEPT(deptno,dname) VALUES(54,'회%계부');
+  
+	부서테이블의 부서명에 _ 또는 %가 포함된 부서를 찾고 싶다
+	SELECT *
+	FROM   DEPT
+	WHERE dname like '%#_%'  escape '#' 
+				OR
+	      dname like '%@%%'  escape '@'; 
+	
+	
+	SELECT empno,ename,hiredate,sal,deptno
+	FROM   emp
+	WHERE  ename  LIKE 'M%';  사원명이 M으로 시작
+	
+
+	SELECT empno,ename,hiredate,sal,deptno
+	FROM   emp
+	WHERE  ename  LIKE '%M';  사원명이 M으로 끝 
+	
+	사원명에 M이 들어가는 사원조회
+	SELECT empno,ename,hiredate,sal,deptno
+	FROM   emp
+	WHERE  ename  LIKE '%M%';
+
+ * NULL
+  IS NULL : NULL이다
+	IS NOT NULL : NULL이 아니다
+	
+	부서 소재지가 미확정인 부서 조회
+	SELECT *
+	FROM   DEPT
+	WHERE  LOC IS NULL;
+
+  부서 소재지가 확정인 부서 조회
+	SELECT *
+	FROM   DEPT
+	WHERE  LOC IS NOT NULL;
+	
+ -------------------------------------------
+ *집합연산자
+  2개의  SELECT 문을 하나의 SELECT문으로 묶어서 처리할 수 있는 연산자
+  서로 다른 테이블의 컬럼값을 집합개념을 적용하였다
+	
+	UNION,  UNION ALL:합집합에 해당하는 연산자
+>SELECT DEPTNO
+ FROM   DEPT
+ UNION  ALL
+ SELECT DEPTNO
+ FROM   EMP;
+DEPTNO
+------
+    10
+    20
+    30
+		...중략
+    40
+    20
+    30
+    30	
+	
+>SELECT DEPTNO
+ FROM   DEPT
+ UNION
+ SELECT DEPTNO
+ FROM   EMP;
+DEPTNO
+------
+    10
+    20
+    30
+    40
+
+	MINUS:차집합에 해당하는 연산자
+>SELECT DEPTNO
+  FROM   DEPT
+  MINUS
+  SELECT DEPTNO
+ FROM   EMP;
+ DEPTNO
+-------
+     40
+
+  INTERSECT : 교집합에 해당하는 연산자	
+>SELECT DEPTNO
+ FROM   DEPT
+ INTERSECT
+ SELECT DEPTNO
+ FROM   EMP;
+DEPTNO
+------
+    10
+    20
+    30
+	
+	
+ ---------------------------------------------
+	*입력(교재 P296) ★★★★★
+	INSERT INTO 테이블명[(컬럼명,컬럼명,...)]
+	VALUES(값,값,..);
+
+	-- 부서(DEPT)테이블
+	-- 명시적 null : NULL, ''
+	INSERT INTO DEPT(deptno, dname, loc)
+	VALUES(52,NULL,'');
+	
+	-- 묵시적 null : loc컬럼에 null값 입력
+	INSERT INTO DEPT(deptno, dname)
+	VALUES(51,'디자인부');
+	
+	
+	INSERT INTO DEPT(deptno)
+	VALUES(NULL);
+  cannot insert NULL into ("SCOTT"."DEPT"."DEPTNO")
+	
+	INSERT INTO DEPT(deptno)
+	VALUES(52);
+	unique constraint (SCOTT.PK_DEPT) violated
+	
+	
+	INSERT INTO DEPT(deptno, dname, loc)
+	VALUES(51,'슈퍼울트라캡숑최강개발부','서울');
+	
+	value too large for column "SCOTT"."DEPT"."DNAME" 
+	(actual: 36, maximum: 14)
+	
+	주의
+	데이터를 CRUD할 때는 컬럼의 데이터타입,크기,
+	      제약조건(NN, Unique, PK..)에 주의
+	문자,날짜는 ''
+	
+	*참고
+	 제약조건(교재 P333)
+============================================= 	 
+ *삭제(교재 P306) ★★★★★ 
+	DELETE [FROM]	테이블명
+  [WHERE 조건];	
+	
+============================================= 
+conn /as sydba
+
+*user관리(교재 13장 p516~)
+-user 생성
+형식>	CREATE user user명
+		identified by 비번;
+실습> CREATE user scott
+		identified by t;
+
+-- 롤(권한)부여
+실습> GRANT connect, resource
+	  TO    scott;
+
+-user 수정
+형식>	ALTER user user명
+		identified by 비번;
+실습> ALTER user scott
+		identified by tiger; 
+
+
+-user 삭제
+형식>	DROP user user명;
+실습> DROP user scott;
+
+==권한(privilege)관리
+-role(롤) :권한들의 묶음
+-종류 : connect, resource, dba
+
+-권한부여
+형식>	GRANT 권한명,권한명,..
+	  TO    USER명;
+		
+-권한회수
+형식> REVOKE  권한명,권한명,..
+		FROM    USER명;	
+
+
+==DDL명령어(교재 5장~)
+-객체(Object)생성
+CREATE 객체종류 객체명
+~~~~~
+
+-객체 수정
+ALTER 객체종류 객체명
+~
+
+-객체 삭제
+DROP 객체종류 객체명
+~~~
+ 
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	
+	
+	
+	
+	
+	
